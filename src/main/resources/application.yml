@@ -20,3 +20,15 @@ spring:
   sql:
     init:
       mode: always
+  data:
+    redis:
+      port: 6379
+      host: 2601:600:8d00:2bb9:7813:3e9d:5eb2:65ea
+      password: 123321
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 100ms
+      database: 1

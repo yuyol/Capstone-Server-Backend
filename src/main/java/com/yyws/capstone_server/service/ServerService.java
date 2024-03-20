@@ -12,4 +12,11 @@ public interface ServerService {
     List<ModelDto> findAllModel();
     DeviceModelDto findAllDeviceAndModel();
 
+    void modifyDeviceInfoById(DeviceDto deviceDto);
+
+    void addDevice(DeviceDto deviceDto);
+
+    DeviceDto parseInfo(String deviceInfo);
+
+    DeviceDto findDeviceInfo(Long id);
 }

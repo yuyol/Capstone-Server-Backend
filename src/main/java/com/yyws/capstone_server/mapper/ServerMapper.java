@@ -16,6 +16,15 @@ public class ServerMapper {
         deviceDto.setCpuArch(device.getCpuArch());
         return deviceDto;
     }
+    public static Device DeviceDtoToDevice(DeviceDto deviceDto, Device device) {
+        device.setId(deviceDto.getId());
+        device.setName(deviceDto.getName());
+        device.setCpuFrequency(deviceDto.getCpuFrequency());
+        device.setSram(deviceDto.getSram());
+        device.setFlash(deviceDto.getFlash());
+        device.setCpuArch(deviceDto.getCpuArch());
+        return device;
+    }
 
     public static ModelDto ModelToModelDtos(Model model, ModelDto modelDto) {
         modelDto.setId(model.getId());

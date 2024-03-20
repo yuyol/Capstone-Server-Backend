@@ -3,6 +3,8 @@ package com.yyws.capstone_server.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -12,7 +14,8 @@ import lombok.*;
 @Table(name = "DEVICE")
 public class Device {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
+//    @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
+    @GeneratedValue(strategy = GenerationType.TABLE)
     private long id;
     private String name;
     // unit: MHZ
@@ -21,5 +24,7 @@ public class Device {
     private long sram;
     // unit: KB
     private long flash;
+    private int floatingPoint;
     private String cpuArch;
+    private LocalDateTime lastHeartBeat;
 }

@@ -48,19 +48,24 @@ public class RedisConfig {
         // Serializer for String type keys
         RedisSerializer<String> stringSerializer = RedisSerializer.string();
 
-        // Serializer for DeviceDto values
-        Jackson2JsonRedisSerializer<Device> deviceDtoSerializer = new Jackson2JsonRedisSerializer<>(Device.class);
+//        // Serializer for DeviceDto values
+//        Jackson2JsonRedisSerializer<Device> deviceDtoSerializer = new Jackson2JsonRedisSerializer<>(Device.class);
+//
+//        // Optional: Customize the underlying ObjectMapper if needed
+//        ObjectMapper objectMapper = new ObjectMapper();
+//        objectMapper.registerModule(new JavaTimeModule());
+//        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+//        deviceDtoSerializer.setObjectMapper(objectMapper);
 
-        // Optional: Customize the underlying ObjectMapper if needed
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        deviceDtoSerializer.setObjectMapper(objectMapper);
+        GenericJackson2JsonRedisSerializer genericSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         template.setKeySerializer(stringSerializer);
-        template.setValueSerializer(deviceDtoSerializer);
+        template.setValueSerializer(genericSerializer);
         template.setHashKeySerializer(stringSerializer);
-        template.setHashValueSerializer(deviceDtoSerializer);
+        template.setHashValueSerializer(genericSerializer);
 
         return template;
     }

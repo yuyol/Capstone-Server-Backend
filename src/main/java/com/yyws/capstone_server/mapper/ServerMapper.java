@@ -14,6 +14,8 @@ public class ServerMapper {
         deviceDto.setSram(device.getSram());
         deviceDto.setFlash(device.getFlash());
         deviceDto.setCpuArch(device.getCpuArch());
+        deviceDto.setFloatingPoint(device.getFloatingPoint());
+        deviceDto.setLastHeartBeat(device.getLastHeartBeat());
         return deviceDto;
     }
     public static Device DeviceDtoToDevice(DeviceDto deviceDto, Device device) {
@@ -23,6 +25,8 @@ public class ServerMapper {
         device.setSram(deviceDto.getSram());
         device.setFlash(deviceDto.getFlash());
         device.setCpuArch(deviceDto.getCpuArch());
+        device.setFloatingPoint(deviceDto.getFloatingPoint());
+        device.setLastHeartBeat(deviceDto.getLastHeartBeat());
         return device;
     }
 

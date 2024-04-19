@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -78,17 +79,6 @@ public class ServerController {
                 .body(deviceDto);
     }
 
-    @GetMapping("/fetchConnectedDevice")
-    public ResponseEntity<String> fetchConnectedDevice() {
-        String[] portNames = SerialPortList.getPortNames();
-        for(String portName : portNames) {
-            System.out.println(portName);
-            // You may want to attempt to connect here to verify if it's an Arduino.
-        }
-        return ResponseEntity.status(HttpStatus.OK)
-                .body("OK");
-    }
-
     @PostMapping("/addDevice")
     public ResponseEntity<String> addDevice(@RequestParam String name,
                                             @RequestParam long cpuFrequency,
@@ -111,17 +101,18 @@ public class ServerController {
     }
 
 
+    /**
+     * receive the device info from Arduino
+     * @param deviceInfo
+     * @return
+     */
     @PostMapping("/device-info")
     public ResponseEntity receiveDeviceInfo(@RequestBody String deviceInfo) {
-        // Process the device information received from the Arduino device
-//        System.out.println("Received device information: " + deviceInfo);
 
-        // You can parse the device information and store it in your database, perform some actions, etc.
-        // 1. parse info
-        DeviceDto deviceDto = serverService.parseInfo(deviceInfo);
-        System.out.println(deviceDto.toString());
+        // 1. save the device info or update heartbeat time.
+        serverService.devicePingServer(deviceInfo);
 
-        // 2. find file path from redis
+
 
 
         // file test
@@ -142,8 +133,21 @@ public class ServerController {
             return ResponseEntity.internalServerError().build();
         }
 
-        // Send a response back to the Arduino device if needed
-//        return "Device information received successfully";
+
+    }
+
+    /**
+     * receive request from frontend in time intervals
+     *
+     * @return
+     */
+    @GetMapping("/fetchConnectingDevices")
+    public ResponseEntity<List<DeviceDto>> fetchConnectingDevices() {
+
+        List<DeviceDto> liveDevices = serverService.checkDevicesHeartbeat();
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(liveDevices);
     }
 
 }

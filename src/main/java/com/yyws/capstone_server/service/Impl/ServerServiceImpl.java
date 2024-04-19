@@ -9,14 +9,19 @@ import com.yyws.capstone_server.mapper.ServerMapper;
 import com.yyws.capstone_server.repository.DeviceRedisRepository;
 import com.yyws.capstone_server.repository.DeviceRepository;
 import com.yyws.capstone_server.repository.ModelRepository;
+import com.yyws.capstone_server.repository.ModelRedisRepository;
 import com.yyws.capstone_server.service.ServerService;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -32,6 +37,9 @@ public class ServerServiceImpl implements ServerService {
     @Autowired
     ModelRepository modelRepository;
 
+    @Autowired
+    ModelRedisRepository modelRedisRepository;
+
     @Override
     public List<DeviceDto> findAllDevice() {
 //        List<Device> devices = deviceRepository.findAll();
@@ -46,7 +54,8 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     public List<ModelDto> findAllModel() {
-        List<Model> models = modelRepository.findAll();
+//        List<Model> models = modelRepository.findAll();
+        List<Model> models = modelRedisRepository.findAll();
         List<ModelDto> modelDtos = new ArrayList<>();
         for (Model model :
                 models) {
@@ -67,13 +76,18 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     public void modifyDeviceInfoById(DeviceDto deviceDto) {
-        Device referenceById = deviceRepository.getReferenceById(deviceDto.getId());
-        referenceById.setName(deviceDto.getName());
-        referenceById.setCpuFrequency(deviceDto.getCpuFrequency());
-        referenceById.setSram(deviceDto.getSram());
-        referenceById.setFlash(deviceDto.getFlash());
-        referenceById.setCpuArch(deviceDto.getCpuArch());
-        deviceRepository.save(referenceById);
+//        Device referenceById = deviceRepository.getReferenceById(deviceDto.getId());
+//        referenceById.setName(deviceDto.getName());
+//        referenceById.setCpuFrequency(deviceDto.getCpuFrequency());
+//        referenceById.setSram(deviceDto.getSram());
+//        referenceById.setFlash(deviceDto.getFlash());
+//        referenceById.setCpuArch(deviceDto.getCpuArch());
+//        deviceRepository.save(referenceById);
+
+        DeviceDto savedDevice = findDeviceInfo(deviceDto.getId());
+        if (savedDevice != null) {
+            deviceRedisRepository.saveDevice(deviceDto);
+        }
     }
 
     @Override
@@ -82,7 +96,8 @@ public class ServerServiceImpl implements ServerService {
 
         Device device = ServerMapper.DeviceDtoToDevice(deviceDto, new Device());
 //        device.setId((long) (count+1));
-        deviceRepository.save(device);
+//        deviceRepository.save(device);
+        deviceRedisRepository.saveDevice(deviceDto);
     }
 
     @Override
@@ -128,5 +143,46 @@ public class ServerServiceImpl implements ServerService {
 
         DeviceDto deviceDto = deviceRedisRepository.findDeviceInfo(id);
         return deviceDto;
+    }
+
+    @Override
+    public void devicePingServer(String deviceInfo) {
+        // 1.1 parse info
+        DeviceDto deviceDto = parseInfo(deviceInfo);
+        System.out.println(deviceDto.toString());
+
+        // 1.2 use chip id to search if there is a device saved in the redis
+        DeviceDto savedDevice = findDeviceInfo(deviceDto.getId());
+
+        if(savedDevice != null) {
+            // 1.2.1 true: update heartbeat time
+            savedDevice.setLastHeartBeat(LocalDateTime.now());
+            deviceRedisRepository.saveDevice(savedDevice);
+        } else {
+            // 1.2.2 false: save into the database
+            deviceDto.setLastHeartBeat(LocalDateTime.now());
+            deviceRedisRepository.saveDevice(deviceDto);
+        }
+    }
+
+    @Override
+    public List<DeviceDto> checkDevicesHeartbeat() {
+        List<DeviceDto> liveDevices = new ArrayList<>();
+        // find all devices
+        List<Device> devices = deviceRedisRepository.findAll();
+        LocalDateTime now = LocalDateTime.now();
+        // 2 minutes timeout
+        Duration timeout = Duration.ofMinutes(2);
+
+        devices.forEach(device -> {
+            if (device.getLastHeartBeat() != null) {
+                Duration durationSinceLastHeartbeat = Duration.between(device.getLastHeartBeat(), now);
+                if (durationSinceLastHeartbeat.compareTo(timeout) <= 0) {
+                    liveDevices.add(ServerMapper.DeviceToDeviceDto(device, new DeviceDto()));
+                }
+            }
+        });
+
+        return liveDevices;
     }
 }

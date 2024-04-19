@@ -19,4 +19,9 @@ public interface ServerService {
     DeviceDto parseInfo(String deviceInfo);
 
     DeviceDto findDeviceInfo(Long id);
+
+    void devicePingServer(String deviceInfo);
+
+    List<DeviceDto> checkDevicesHeartbeat();
+
 }

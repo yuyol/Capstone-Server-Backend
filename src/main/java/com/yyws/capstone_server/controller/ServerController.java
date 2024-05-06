@@ -118,7 +118,7 @@ public class ServerController {
         // file test
         try {
             // Specify the file location here
-            Path filePath = Path.of("D:\\programming\\project\\capstone\\files\\test.txt");
+            Path filePath = Path.of("D:\\programming\\project\\capstone\\Arduino\\ota_final_6s\\ota_final_6s\\build\\esp32.esp32.esp32s3\\ota_final_6s.ino.bin");
             Resource fileResource = new UrlResource(filePath.toUri());
 
             if (fileResource.exists() || fileResource.isReadable()) {
@@ -132,8 +132,6 @@ public class ServerController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
-
-
     }
 
     /**

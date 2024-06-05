@@ -159,7 +159,7 @@ public class ServerServiceImpl implements ServerService {
             savedDevice.setLastHeartBeat(LocalDateTime.now());
             deviceRedisRepository.saveDevice(savedDevice);
         } else {
-            // 1.2.2 false: save into the database
+            // 1.2.2 false: save into to the database
             deviceDto.setLastHeartBeat(LocalDateTime.now());
             deviceRedisRepository.saveDevice(deviceDto);
         }

@@ -6,4 +6,5 @@ import lombok.Data;
 public class ModelDto {
     private long id;
     private String name;
+    private Double successRate;
 }

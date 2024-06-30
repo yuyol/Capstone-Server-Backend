@@ -8,6 +8,7 @@ import com.yyws.capstone_server.entity.Model;
 public class ServerMapper {
 
     public static DeviceDto DeviceToDeviceDto(Device device, DeviceDto deviceDto) {
+        if (device == null) return null;
         deviceDto.setId(device.getId());
         deviceDto.setName(device.getName());
         deviceDto.setCpuFrequency(device.getCpuFrequency());
@@ -33,6 +34,7 @@ public class ServerMapper {
     public static ModelDto ModelToModelDtos(Model model, ModelDto modelDto) {
         modelDto.setId(model.getId());
         modelDto.setName(model.getName());
+        modelDto.setSuccessRate(model.getSuccessRate());
         return modelDto;
     }
 }

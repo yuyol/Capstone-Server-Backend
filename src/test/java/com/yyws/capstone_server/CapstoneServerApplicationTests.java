@@ -33,10 +33,14 @@ class CapstoneServerApplicationTests {
 	void setDevice() {
 		Device d1 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini", 80, 50168, 4194304, 1, null, LocalDateTime.now());
 		Device d2 = new Device(2, "test device", 80, 50168, 4194304, 1, null, null);
+		Device d3 = new Device(4024575816L, "ESP32S3", 240, 50168, 8388608, 1, null, LocalDateTime.now());
+		//Device d4 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini", 80, 50168, 4194304, 1, null, LocalDateTime.now());
 		redisTemplate.opsForValue().set("capstone:device:7935192", d1);
 		redisTemplate.opsForValue().set("capstone:device:2", d2);
 
 		Object rawD1 = redisTemplate.opsForValue().get("capstone:device:7935192");
+		Object rawD2 = redisTemplate.opsForValue().get("capstone:device:4024575816L");
+		//Object rawD3 = redisTemplate.opsForValue().get("capstone:device:7935192");
 		Device getD1 = objectMapper.convertValue(rawD1, Device.class);
 
 		LocalDateTime lastHeartBeat = getD1.getLastHeartBeat();
@@ -64,12 +68,17 @@ class CapstoneServerApplicationTests {
 
 	@Test
 	void setModel() {
-		Model cnn = new Model(1, "CNN");
-		Model rnn = new Model(2, "RNN");
-		Model perceptron = new Model(3, "Percept");
-		redisTemplate.opsForValue().set("capstone:model:1",cnn);
-		redisTemplate.opsForValue().set("capstone:model:2",rnn);
-		redisTemplate.opsForValue().set("capstone:model:3",perceptron);
+		Model od_animal = new Model(1, "od_animal.ino.bin", 90.0);
+		Model od_person = new Model(2, "od_person.ino.bin", 75.0);
+		Model od_multi = new Model(3, "od_multi.ino.bin", 80.0);
+		Model wifi_position = new Model(4, "wifi_position.ino.bin", 90.0);
+		Model person_detection = new Model(5, "person_detection.ino.bin", 90.0);
+
+		redisTemplate.opsForValue().set("capstone:model:1",od_animal);
+		redisTemplate.opsForValue().set("capstone:model:2",od_person);
+		redisTemplate.opsForValue().set("capstone:model:3",od_multi);
+		redisTemplate.opsForValue().set("capstone:model:4",wifi_position);
+		redisTemplate.opsForValue().set("capstone:model:5",person_detection);
 
 		Object o = redisTemplate.opsForValue().get("capstone:model:1");
 		Model model = objectMapper.convertValue(o, Model.class);

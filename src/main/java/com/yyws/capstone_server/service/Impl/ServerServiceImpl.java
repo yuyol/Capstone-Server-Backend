@@ -185,4 +185,5 @@ public class ServerServiceImpl implements ServerService {
 
         return liveDevices;
     }
+
 }

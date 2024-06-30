@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,7 +46,7 @@ public class ServerController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(deviceDto);
     }
-    
+
     @GetMapping("/findAllModel")
     public ResponseEntity<List<ModelDto>> findAllModel() {
         List<ModelDto> modelDto = serverService.findAllModel();
@@ -114,29 +115,17 @@ public class ServerController {
      * @return
      */
     @PostMapping("/device-info")
-    public ResponseEntity receiveDeviceInfo(@RequestBody String deviceInfo) {
+    public ResponseEntity<String> receiveDeviceInfo(@RequestBody String deviceInfo) {
 
         // 1. save the device info or update heartbeat time.
         serverService.devicePingServer(deviceInfo);
 
-
-        // file test
-        try {
-            // Specify the file location here
-            Path filePath = Path.of("D:\\programming\\project\\capstone\\Arduino\\ota_final_6s\\ota_final_6s\\build\\esp32.esp32.esp32s3\\ota_final_6s.ino.bin");
-            Resource fileResource = new UrlResource(filePath.toUri());
-
-            if (fileResource.exists() || fileResource.isReadable()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileResource.getFilename() + "\"")
-                        .body(fileResource);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+        DeviceDto deviceDto = serverService.parseInfo(deviceInfo);
+        String modelName = deviceModelMap.get(String.valueOf(deviceDto.getId()));
+        if (modelName != null) {
+            return ResponseEntity.ok(modelName);
         }
+        return ResponseEntity.ok("");
     }
 
     @GetMapping("/device-info")
@@ -145,7 +134,7 @@ public class ServerController {
         try {
             String requestedModelName = null;
             DeviceDto deviceDto = serverService.parseInfo(deviceInfo);
-            String deviceId = deviceDto.getName();
+            String deviceId = String.valueOf(deviceDto.getId());
             // 1. iterate map keys to match the device id
             for (String id : deviceModelMap.keySet()) {
                 if(id.equals(deviceId)) requestedModelName = deviceModelMap.get(id);
@@ -156,7 +145,7 @@ public class ServerController {
             if (fileName.equals(requestedModelName)) {
                 logger.info("Processing file: {}", fileName);
 
-                Path filePath = Path.of("C:\\Users\\georg\\Desktop\\complete_server_model", fileName);
+                Path filePath = Path.of("C:\\Users\\georg\\Desktop\\final_complete_server_model", fileName);
                 Resource fileResource = new UrlResource(filePath.toUri());
 
                 if (fileResource.exists() || fileResource.isReadable()) {
@@ -193,6 +182,26 @@ public class ServerController {
                 .body(liveDevices);
     }
 
+    @GetMapping("/fetchModels")
+    public ResponseEntity<List<ModelDto>> fetchModels(@RequestParam String deviceId) {
+
+        List<ModelDto> models = serverService.findAllModel();
+//        if (deviceId.equals("7935192")) {
+//            models = null;
+//        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(models);
+    }
+
+//    @GetMapping("/fetchModels")
+//    public ResponseEntity<List<ModelDto>> fetchModels(@RequestParam String deviceId) {
+//        List<ModelDto> models = serverService.findAllModel();
+//
+//        return ResponseEntity.status(HttpStatus.OK)
+//                .body(models);
+//    }
+
 
     // added
     private final AtomicReference<String> requestedModel = new AtomicReference<>(null);
@@ -202,10 +211,27 @@ public class ServerController {
     private static final Logger logger = LoggerFactory.getLogger(ServerController.class);
 
     @PostMapping("/ota-complete")
-    public ResponseEntity<String> otaComplete() {
+    public ResponseEntity<String> otaComplete(@RequestParam String deviceInfo) {
+        DeviceDto deviceDto = serverService.parseInfo(deviceInfo);
+        String deviceId = String.valueOf(deviceDto.getId());
         logger.info("OTA update completed, clearing requested model.");
-        requestedModel.set(null);
+        String removedModel = deviceModelMap.remove(deviceId);
+        if (removedModel != null) {
+            logger.info("Model has been removed successfully.");
+        }
         return ResponseEntity.ok("Requested model cleared");
+    }
+
+    @GetMapping("/check-ota-status")
+    public ResponseEntity<String> checkOtaStatus() {
+        // Check if the deployment is complete
+        boolean isOtaComplete = deviceModelMap.isEmpty(); // This logic may vary based on your actual implementation
+
+        if (isOtaComplete) {
+            return ResponseEntity.ok("OTA complete");
+        } else {
+            return ResponseEntity.ok("OTA in progress");
+        }
     }
 
     @PostMapping("/send-output")
@@ -235,17 +261,16 @@ public class ServerController {
     }
 
     @PostMapping("/heartbeat")
-    public ResponseEntity<String> heartbeat(@RequestBody List<String> modelNames, @RequestParam String deviceInfo) {
-        // 1. save device info and update timestamp
-        serverService.devicePingServer(deviceInfo);
+    public ResponseEntity<String> heartbeat(@RequestBody String deviceInfo) {
+        logger.info("Received heartbeat with device info: {}", deviceInfo);
 
-        logger.info("Heartbeat received with model names: {}", modelNames);
-        for (String modelName : modelNames) {
-            if (requestedModel.get() != null && requestedModel.get().equals(modelName)) {
-                logger.info("Matched model for heartbeat: {}", modelName);
-                return ResponseEntity.ok(modelName);
-            }
+        try {
+            serverService.devicePingServer(deviceInfo);
+        } catch (Exception e) {
+            logger.error("Exception while processing heartbeat: ", e);
+            return ResponseEntity.status(500).body("Server error: " + e.getMessage());
         }
+
         return ResponseEntity.noContent().build();
     }
 

@@ -17,4 +17,5 @@ public class Model {
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     private long id;
     private String name;
+    private Double successRate;
 }

@@ -274,4 +274,18 @@ public class ServerController {
         return ResponseEntity.noContent().build();
     }
 
+    // Device as server
+
+    /**
+     * Receive device info and device IP address from device
+     * @param deviceInfo
+     * @param IpAddress
+     * @return
+     */
+    public ResponseEntity<String> receiveFromDevice(String deviceInfo, String IpAddress) {
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body("OK");
+    }
+
 }

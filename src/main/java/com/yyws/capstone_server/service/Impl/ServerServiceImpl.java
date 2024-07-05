@@ -15,13 +15,12 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -39,6 +38,7 @@ public class ServerServiceImpl implements ServerService {
 
     @Autowired
     ModelRedisRepository modelRedisRepository;
+
 
     @Override
     public List<DeviceDto> findAllDevice() {

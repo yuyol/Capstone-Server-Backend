@@ -3,6 +3,8 @@ package com.yyws.capstone_server.controller;
 import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
+import com.yyws.capstone_server.entity.Device;
+import com.yyws.capstone_server.service.HttpService;
 import com.yyws.capstone_server.service.ServerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,8 +33,11 @@ public class ServerController {
 
     ServerService serverService;
 
-    public ServerController(ServerService serverService) {
+    HttpService httpService;
+
+    public ServerController(ServerService serverService, HttpService httpService) {
         this.serverService = serverService;
+        this.httpService = httpService;
     }
 
     @GetMapping("/hello")
@@ -282,10 +287,26 @@ public class ServerController {
      * @param IpAddress
      * @return
      */
-    public ResponseEntity<String> receiveFromDevice(String deviceInfo, String IpAddress) {
+    @GetMapping("/receiveFromDevice")
+    public ResponseEntity<String> receiveFromDevice(@RequestParam String deviceInfo,@RequestParam String IpAddress) {
+
+        httpService.receiveFromDevice(deviceInfo, IpAddress);
+        System.out.println(IpAddress);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body("OK");
+    }
+
+    /**
+     * Receive from frontend
+     * @return
+     */
+    public ResponseEntity<List<DeviceDto>> receiveFromFrontend() {
+
+        List<DeviceDto> devices = new ArrayList<>();
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(devices);
     }
 
 }

@@ -52,4 +52,9 @@ public class DeviceRedisRepository {
         String key = "capstone:device:"+savedDevice.getId();
         redisTemplate.opsForValue().set(key, savedDevice);
     }
+
+    public void saveDeviceAsServer(DeviceDto savedDevice) {
+        String key = "capstone:device:asServer:" + savedDevice.getId();
+        redisTemplate.opsForValue().set(key, savedDevice);
+    }
 }

@@ -26,6 +26,7 @@ public class DeviceDto {
         this.cpuArch = cpuArch;
     }
     private long id;
+    private String ipAddr;
     private String name;
     private long cpuFrequency;
     private long sram;

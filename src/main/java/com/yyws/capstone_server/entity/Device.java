@@ -18,6 +18,7 @@ public class Device {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private long id;
     private String name;
+    private String ipAddr;
     // unit: MHZ
     private long cpuFrequency;
     // unit: KB

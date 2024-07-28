@@ -21,13 +21,13 @@ spring:
     console:
       enabled: true
   sql:
-    init:
+    init:  
       mode: always
   data:
     redis:
       port: 6379
       host: 2601:600:8d00:2bb9:7813:3e9d:5eb2:65ea
-#      host: 2607:fb91:152d:66db:22d4:f259:da19:9e4b
+#      host: 172.20.10.13
       password: 123321
       lettuce:
         pool:

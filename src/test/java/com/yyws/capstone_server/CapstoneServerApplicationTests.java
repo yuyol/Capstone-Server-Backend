@@ -31,10 +31,10 @@ class CapstoneServerApplicationTests {
 
 	@Test
 	void setDevice() {
-		Device d1 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini", 80, 50168, 4194304, 1, null, LocalDateTime.now());
-		Device d2 = new Device(2, "test device", 80, 50168, 4194304, 1, null, null);
-		Device d3 = new Device(4024575816L, "ESP32S3", 240, 50168, 8388608, 1, null, LocalDateTime.now());
-		//Device d4 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini", 80, 50168, 4194304, 1, null, LocalDateTime.now());
+		Device d1 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini","", 80, 50168, 4194304, 1, null, LocalDateTime.now());
+		Device d2 = new Device(2, "test device","", 80, 50168, 4194304, 1, null, null);
+		Device d3 = new Device(4024575816L, "ESP32S3","", 240, 50168, 8388608, 1, null, LocalDateTime.now());
+		//Device d4 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini","", 80, 50168, 4194304, 1, null, LocalDateTime.now());
 		redisTemplate.opsForValue().set("capstone:device:7935192", d1);
 		redisTemplate.opsForValue().set("capstone:device:2", d2);
 
@@ -104,4 +104,12 @@ class CapstoneServerApplicationTests {
 		System.out.println(models);
 	}
 
+
+	@Test
+	void setDeviceAsServer() {
+		Device d1 = new Device(7935192, "LOLIN(WEMOS) D1 R2 & mini","123.321.123", 80, 50168, 4194304, 1, null, LocalDateTime.now());
+		Device d2 = new Device(2, "test device","111.222.333", 80, 50168, 4194304, 1, null, null);
+		redisTemplate.opsForValue().set("capstone:device:asServer:7935192", d1);
+		redisTemplate.opsForValue().set("capstone:device:asServer:2", d2);
+	}
 }

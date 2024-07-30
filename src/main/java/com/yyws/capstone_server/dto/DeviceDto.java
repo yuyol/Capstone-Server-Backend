@@ -27,6 +27,7 @@ public class DeviceDto {
     }
     private long id;
     private String ipAddr;
+    private String urlString;
     private String name;
     private long cpuFrequency;
     private long sram;

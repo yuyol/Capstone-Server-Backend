@@ -10,10 +10,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class HttpService {
@@ -21,7 +18,7 @@ public class HttpService {
     private final RestTemplate restTemplate;
     private WebClient webClient;
 
-    List<DeviceDto> devices = new ArrayList<>();
+
 
     Map<String, DeviceDto> deviceMap = new HashMap<>();
 
@@ -104,8 +101,17 @@ public class HttpService {
         deviceDto.setLastHeartBeat(LocalDateTime.now());
 
         // Once a device connected, add to the map
+        // 1. insert ip address into URL
+        String url = "http://" + ipAddress + "/update";
+        deviceDto.setUrlString(url);
+
         deviceMap.put(String.valueOf(deviceDto.getId()), deviceDto);
         System.out.println(deviceMap);
         deviceRedisRepository.saveDeviceAsServer(deviceDto);
+    }
+
+    public List<DeviceDto> findLiveDevices() {
+
+        return new ArrayList<>(deviceMap.values());
     }
 }

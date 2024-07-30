@@ -301,9 +301,10 @@ public class ServerController {
      * Receive from frontend
      * @return
      */
+    @GetMapping("/receiveFromFrontend")
     public ResponseEntity<List<DeviceDto>> receiveFromFrontend() {
 
-        List<DeviceDto> devices = new ArrayList<>();
+        List<DeviceDto> devices = httpService.findLiveDevices();
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(devices);

@@ -1,11 +1,11 @@
 package com.yyws.capstone_server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.entity.Device;
 import com.yyws.capstone_server.entity.Model;
+import com.yyws.capstone_server.entity.Users;
+import org.h2.engine.User;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -13,8 +13,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SpringBootTest
 class CapstoneServerApplicationTests {
@@ -111,5 +113,25 @@ class CapstoneServerApplicationTests {
 		Device d2 = new Device(2, "test device","111.222.333", 80, 50168, 4194304, 1, null, null);
 		redisTemplate.opsForValue().set("capstone:device:asServer:7935192", d1);
 		redisTemplate.opsForValue().set("capstone:device:asServer:2", d2);
+	}
+
+	@Test
+	void setUser() {
+		Users user1 = new Users(1l,"abcd","yy","yy368@uw.edu","4255438889","123456789");
+		Users user2 = new Users(2l,"abcde","yyol","yy369@uw.edu","4255438888","123456789");
+		redisTemplate.opsForValue().set("capstone:users:1l", user1);
+		redisTemplate.opsForValue().set("capstone:users:2l", user2);
+	}
+
+	@Test
+	void getUserByEmail() {
+		Set<String> keys = redisTemplate.keys("capstone:users:*");
+		List<Users> collect = keys.stream()
+				.map(key -> objectMapper.convertValue(redisTemplate.opsForValue().get(key), Users.class))
+				.filter(user -> user != null && user.getEmail().equals("yy368@uw.edu"))
+				.collect(Collectors.toList());
+
+
+		System.out.println(collect);
 	}
 }

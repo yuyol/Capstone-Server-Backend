@@ -3,6 +3,7 @@ package com.yyws.capstone_server.repository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.entity.Device;
+import com.yyws.capstone_server.entity.UserDeviceRelation;
 import com.yyws.capstone_server.mapper.ServerMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -56,5 +57,12 @@ public class DeviceRedisRepository {
     public void saveDeviceAsServer(DeviceDto savedDevice) {
         String key = "capstone:device:asServer:" + savedDevice.getId();
         redisTemplate.opsForValue().set(key, savedDevice);
+    }
+
+    public void registerDevice(UserDeviceRelation userDeviceRelation) {
+        String deviceKey = "capstone:deviceUserRelation:" + userDeviceRelation.getDeviceId();
+        String userKey = "capstone:userDeviceRelation:" + userDeviceRelation.getEmail();
+        redisTemplate.opsForValue().set(deviceKey, userDeviceRelation);
+        redisTemplate.opsForValue().set(userKey, userDeviceRelation);
     }
 }

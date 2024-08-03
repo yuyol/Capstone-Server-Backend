@@ -3,6 +3,7 @@ package com.yyws.capstone_server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yyws.capstone_server.entity.Device;
 import com.yyws.capstone_server.entity.Model;
+import com.yyws.capstone_server.entity.UserDeviceRelation;
 import com.yyws.capstone_server.entity.Users;
 import org.h2.engine.User;
 import org.junit.jupiter.api.Test;
@@ -133,5 +134,14 @@ class CapstoneServerApplicationTests {
 
 
 		System.out.println(collect);
+	}
+
+	@Test
+	void registerDevice() {
+		UserDeviceRelation userDeviceRelation = new UserDeviceRelation("yy368@uw.edu","1");
+		String deviceKey = "capstone:deviceUserRelation:" + userDeviceRelation.getDeviceId();
+		String userKey = "capstone:userDeviceRelation:" + userDeviceRelation.getEmail();
+		redisTemplate.opsForValue().set(deviceKey, userDeviceRelation);
+		redisTemplate.opsForValue().set(userKey, userDeviceRelation);
 	}
 }

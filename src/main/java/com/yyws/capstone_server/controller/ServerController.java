@@ -279,7 +279,11 @@ public class ServerController {
         return ResponseEntity.noContent().build();
     }
 
-    // Device as server
+
+
+    /*********************               Device as Server                 **********************/
+
+
 
     /**
      * Receive device info and device IP address from device
@@ -305,6 +309,31 @@ public class ServerController {
     public ResponseEntity<List<DeviceDto>> receiveFromFrontend() {
 
         List<DeviceDto> devices = httpService.findLiveDevices();
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(devices);
+    }
+
+
+
+    /*********************               After Login                 **********************/
+
+
+
+    @PostMapping("/registerDevice")
+    public ResponseEntity<String> registerDevice(@RequestParam String email, @RequestParam String deviceId) {
+
+        serverService.registerDevice(email, deviceId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body("OK");
+    }
+
+    @GetMapping("/searchOwnedDevices")
+    public ResponseEntity<List<DeviceDto>> searchOwnedDevices(@RequestParam String email) {
+
+//        List<DeviceDto> devices = serverService.searchOwnedDevices(email);
+        List<DeviceDto> devices = null;
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(devices);

@@ -36,4 +36,12 @@ public class DeviceDto {
     private String cpuArch;
 
     private LocalDateTime lastHeartBeat;
+
+    // check if the device is owned by the user
+    // 1 - owned
+    // 2 - free
+    int owned;
+
+    // check if the device is active (Used for the devices owned by the user)
+    int isActive;
 }

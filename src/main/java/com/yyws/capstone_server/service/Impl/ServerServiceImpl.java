@@ -5,6 +5,7 @@ import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
 import com.yyws.capstone_server.entity.Device;
 import com.yyws.capstone_server.entity.Model;
+import com.yyws.capstone_server.entity.UserDeviceRelation;
 import com.yyws.capstone_server.mapper.ServerMapper;
 import com.yyws.capstone_server.repository.DeviceRedisRepository;
 import com.yyws.capstone_server.repository.DeviceRepository;
@@ -184,6 +185,20 @@ public class ServerServiceImpl implements ServerService {
         });
 
         return liveDevices;
+    }
+
+    @Override
+    public List<DeviceDto> searchOwnedDevices(String email) {
+        List<DeviceDto> devices = null;
+        return null;
+    }
+
+    @Override
+    public void registerDevice(String email, String deviceId) {
+        UserDeviceRelation userDeviceRelation = new UserDeviceRelation();
+        userDeviceRelation.setEmail(email);
+        userDeviceRelation.setDeviceId(deviceId);
+        deviceRedisRepository.registerDevice(userDeviceRelation);
     }
 
 }

@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class UsersDto {
 
@@ -21,4 +23,7 @@ public class UsersDto {
     @Size(min = 8,message = "Please enter at least eight passwords")
     @NotEmpty(message = "Password can not be empty")
     private String password;
+
+    // the devices owned by a user
+    List<DeviceDto> ownedDevice;
 }

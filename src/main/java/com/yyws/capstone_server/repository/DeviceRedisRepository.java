@@ -59,10 +59,39 @@ public class DeviceRedisRepository {
         redisTemplate.opsForValue().set(key, savedDevice);
     }
 
-    public void registerDevice(UserDeviceRelation userDeviceRelation) {
-        String deviceKey = "capstone:deviceUserRelation:" + userDeviceRelation.getDeviceId();
-        String userKey = "capstone:userDeviceRelation:" + userDeviceRelation.getEmail();
-        redisTemplate.opsForValue().set(deviceKey, userDeviceRelation);
-        redisTemplate.opsForValue().set(userKey, userDeviceRelation);
+    public void registerDevice(String uniqueId, UserDeviceRelation userDeviceRelation) {
+        String key = "capstone:userDeviceRelation:" + uniqueId;
+        redisTemplate.opsForValue().set(key, userDeviceRelation);
+    }
+
+    public UserDeviceRelation findRelationByUniqueId(String uniqueId) {
+        String key = "capstone:userDeviceRelation:" + uniqueId;
+        return objectMapper.convertValue(redisTemplate.opsForValue().get(key), UserDeviceRelation.class);
+    }
+
+    public List<UserDeviceRelation> findRelationship(UserDeviceRelation userDeviceRelation) {
+//        String key = "capstone:userDeviceRelation:*";
+        Set<String> keys = redisTemplate.keys("capstone:userDeviceRelation:*");
+
+        return keys.stream()
+                .map(key -> objectMapper.convertValue(redisTemplate.opsForValue().get(key), UserDeviceRelation.class))
+                .filter(relation -> relation != null && relation.getDeviceId().equals(userDeviceRelation.getDeviceId()) && relation.getEmail().equals(userDeviceRelation.getEmail()))
+                .collect(Collectors.toList());
+    }
+
+    public List<UserDeviceRelation> searchOwnRelation(String email) {
+
+        Set<String> keys = redisTemplate.keys("capstone:userDeviceRelation:*");
+        return keys.stream()
+                .map(key -> objectMapper.convertValue(redisTemplate.opsForValue().get(key), UserDeviceRelation.class))
+                .filter(relation -> relation != null && relation.getEmail().equals(email))
+                .collect(Collectors.toList());
+    }
+
+
+    public Device searchDeviceById(String deviceId) {
+        String key = "capstone:device:" + deviceId;
+
+        return objectMapper.convertValue(redisTemplate.opsForValue().get(key), Device.class);
     }
 }

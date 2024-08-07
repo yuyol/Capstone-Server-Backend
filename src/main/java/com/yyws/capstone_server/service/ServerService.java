@@ -27,4 +27,6 @@ public interface ServerService {
     List<DeviceDto> searchOwnedDevices(String email);
 
     void registerDevice(String email, String deviceId);
+
+    List<DeviceDto> checkDevicesHeartbeatLogin(String email);
 }

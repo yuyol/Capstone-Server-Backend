@@ -139,9 +139,28 @@ class CapstoneServerApplicationTests {
 	@Test
 	void registerDevice() {
 		UserDeviceRelation userDeviceRelation = new UserDeviceRelation("yy368@uw.edu","1");
-		String deviceKey = "capstone:deviceUserRelation:" + userDeviceRelation.getDeviceId();
-		String userKey = "capstone:userDeviceRelation:" + userDeviceRelation.getEmail();
-		redisTemplate.opsForValue().set(deviceKey, userDeviceRelation);
-		redisTemplate.opsForValue().set(userKey, userDeviceRelation);
+
+		String uniqueId = "abcdefg";
+		String key = "capstone:userDeviceRelation:" + uniqueId;
+		UserDeviceRelation userDeviceRelation1 = objectMapper.convertValue(redisTemplate.opsForValue().get(key), UserDeviceRelation.class);
+		if (userDeviceRelation1 != null) return;
+		redisTemplate.opsForValue().set(key, userDeviceRelation);
+
 	}
+
+	@Test
+	void searchOwnedDevices() {
+		String email = "yy368@uw.edu";
+		Set<String> keys = redisTemplate.keys("capstone:userDeviceRelation:*");
+		List<UserDeviceRelation> collect = keys.stream()
+				.map(key -> objectMapper.convertValue(redisTemplate.opsForValue().get(key), UserDeviceRelation.class))
+				.filter(relation -> relation != null && relation.getEmail().equals(email))
+				.collect(Collectors.toList());
+		System.out.println(collect);
+	}
+
+	void searchOwnRelation() {
+
+	}
+
 }

@@ -16,8 +16,8 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,6 +40,8 @@ public class ServerServiceImpl implements ServerService {
     @Autowired
     ModelRedisRepository modelRedisRepository;
 
+    private final String CHARACTERS = "0123456789abcdefghijqlmnopqrstuvwxyz";
+    private final int UNIQUE_ID_LENGTH = 11;
 
     @Override
     public List<DeviceDto> findAllDevice() {
@@ -188,9 +190,59 @@ public class ServerServiceImpl implements ServerService {
     }
 
     @Override
+    public List<DeviceDto> checkDevicesHeartbeatLogin(String email) {
+        List<DeviceDto> liveDevices = new ArrayList<>();
+        // find all devices
+        List<Device> devices = deviceRedisRepository.findAll();
+        LocalDateTime now = LocalDateTime.now();
+        // 2 minutes timeout
+        Duration timeout = Duration.ofMinutes(2);
+
+        devices.forEach(device -> {
+            if (device.getLastHeartBeat() != null) {
+
+
+                Duration durationSinceLastHeartbeat = Duration.between(device.getLastHeartBeat(), now);
+                if (durationSinceLastHeartbeat.compareTo(timeout) <= 0) {
+                    DeviceDto deviceDto = ServerMapper.DeviceToDeviceDto(device, new DeviceDto());
+                    // find if the device is owned by the user
+                    List<UserDeviceRelation> relationship = deviceRedisRepository.findRelationship(new UserDeviceRelation(email, String.valueOf(device.getId())));
+                    if (relationship.size() != 0){
+                        deviceDto.setOwned(1);
+                    }
+                    liveDevices.add(deviceDto);
+                }
+            }
+        });
+
+        return liveDevices;
+    }
+
+    public int isActive(Device device) {
+        LocalDateTime now = LocalDateTime.now();
+        // 2 minutes timeout
+        Duration timeout = Duration.ofMinutes(2);
+        if(device.getLastHeartBeat() != null) {
+            Duration durationSinceLastHeartbeat = Duration.between(device.getLastHeartBeat(), now);
+            if (durationSinceLastHeartbeat.compareTo(timeout) <= 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    @Override
     public List<DeviceDto> searchOwnedDevices(String email) {
-        List<DeviceDto> devices = null;
-        return null;
+        List<DeviceDto> deviceDtos = new ArrayList<>();
+        List<UserDeviceRelation> userDeviceRelations = deviceRedisRepository.searchOwnRelation(email);
+        if (userDeviceRelations== null) return deviceDtos;
+        for (UserDeviceRelation relation: userDeviceRelations) {
+            Device device = deviceRedisRepository.searchDeviceById(relation.getDeviceId());
+            DeviceDto deviceDto = ServerMapper.DeviceToDeviceDto(device, new DeviceDto());
+            deviceDto.setIsActive(isActive(device));
+            deviceDtos.add(deviceDto);
+        }
+        return deviceDtos;
     }
 
     @Override
@@ -198,7 +250,29 @@ public class ServerServiceImpl implements ServerService {
         UserDeviceRelation userDeviceRelation = new UserDeviceRelation();
         userDeviceRelation.setEmail(email);
         userDeviceRelation.setDeviceId(deviceId);
-        deviceRedisRepository.registerDevice(userDeviceRelation);
+
+        // find if there is already a relationship
+        List<UserDeviceRelation> relationship = deviceRedisRepository.findRelationship(userDeviceRelation);
+        if (relationship.size() != 0) return;
+
+        // Generate unique id
+        String uniqueId = generateUniqueId();
+        UserDeviceRelation relation = deviceRedisRepository.findRelationByUniqueId(uniqueId);
+        while (relation != null) {
+            uniqueId = generateUniqueId();
+            relation = deviceRedisRepository.findRelationByUniqueId(uniqueId);
+        }
+
+        deviceRedisRepository.registerDevice(uniqueId, userDeviceRelation);
     }
 
+    public String generateUniqueId() {
+        StringBuilder uniqueId = new StringBuilder();
+        SecureRandom random = new SecureRandom();
+        for (int i = 0; i < UNIQUE_ID_LENGTH; i++) {
+            int randomIndex = random.nextInt(CHARACTERS.length());
+            uniqueId.append(CHARACTERS.charAt(randomIndex));
+        }
+        return uniqueId.toString();
+    }
 }

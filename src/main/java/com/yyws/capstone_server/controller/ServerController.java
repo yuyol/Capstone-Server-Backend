@@ -4,10 +4,12 @@ import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
 import com.yyws.capstone_server.entity.Device;
+import com.yyws.capstone_server.entity.UserDeviceRelation;
 import com.yyws.capstone_server.service.HttpService;
 import com.yyws.capstone_server.service.ServerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import jssc.SerialPortList;
 import org.springframework.core.io.UrlResource;
@@ -17,12 +19,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -40,10 +44,6 @@ public class ServerController {
         this.httpService = httpService;
     }
 
-    @GetMapping("/hello")
-    public void Hello() {
-        System.out.println("hello");
-    }
 
     @GetMapping("/findAllDevice")
     public ResponseEntity<List<DeviceDto>> findAllDevice() {
@@ -191,21 +191,10 @@ public class ServerController {
     public ResponseEntity<List<ModelDto>> fetchModels(@RequestParam String deviceId) {
 
         List<ModelDto> models = serverService.findAllModel();
-//        if (deviceId.equals("7935192")) {
-//            models = null;
-//        }
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(models);
     }
-
-//    @GetMapping("/fetchModels")
-//    public ResponseEntity<List<ModelDto>> fetchModels(@RequestParam String deviceId) {
-//        List<ModelDto> models = serverService.findAllModel();
-//
-//        return ResponseEntity.status(HttpStatus.OK)
-//                .body(models);
-//    }
 
 
     // added
@@ -279,6 +268,60 @@ public class ServerController {
         return ResponseEntity.noContent().build();
     }
 
+    private final String uploadDir = System.getProperty("user.home") + "D:\\programming\\project\\capstone\\Arduino\\person_bellring";
+    private final String outputDir = System.getProperty("user.home") + "/Desktop/output/";
+    @PostMapping("/convert")
+    public ResponseEntity<Resource> convertSketch(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        try {
+            // Ensure the upload directory exists
+            File uploadDirectory = new File(uploadDir);
+            if (!uploadDirectory.exists()) {
+                uploadDirectory.mkdirs();
+            }
+
+            // Save the uploaded file
+            String originalFilename = file.getOriginalFilename();
+            String uniqueFilename = UUID.randomUUID().toString() + "_" + originalFilename;
+            File uploadFile = new File(uploadDir + uniqueFilename);
+            file.transferTo(uploadFile);
+
+            // Ensure the output directory exists
+            File outputDirectory = new File(outputDir);
+            if (!outputDirectory.exists()) {
+                outputDirectory.mkdirs();
+            }
+
+            // Compile the sketch using Arduino CLI
+            ProcessBuilder pb = new ProcessBuilder("arduino-cli", "compile",
+                    "--fqbn", "arduino:avr:uno",
+                    "--output-dir", outputDir,
+                    uploadFile.getAbsolutePath());
+            Process process = pb.start();
+            process.waitFor();
+
+            // Retrieve the binary file
+            String binFileName = originalFilename.replace(".ino", ".ino.bin");
+            Path binFilePath = Paths.get(outputDir, binFileName);
+            Resource resource = new FileSystemResource(binFilePath.toFile());
+
+            // Clean up temporary files
+            Files.delete(uploadFile.toPath());
+
+            // Return the binary file
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + binFileName + "\"")
+                    .body(resource);
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 
 
     /*********************               Device as Server                 **********************/
@@ -321,9 +364,12 @@ public class ServerController {
 
 
     @PostMapping("/registerDevice")
-    public ResponseEntity<String> registerDevice(@RequestParam String email, @RequestParam String deviceId) {
+    public ResponseEntity<String> registerDevice(@RequestBody UserDeviceRelation relation) {
 
+        String email = relation.getEmail();
+        String deviceId = relation.getDeviceId();
         serverService.registerDevice(email, deviceId);
+        System.out.println(email+deviceId);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body("OK");
@@ -332,11 +378,20 @@ public class ServerController {
     @GetMapping("/searchOwnedDevices")
     public ResponseEntity<List<DeviceDto>> searchOwnedDevices(@RequestParam String email) {
 
-//        List<DeviceDto> devices = serverService.searchOwnedDevices(email);
-        List<DeviceDto> devices = null;
+        List<DeviceDto> devices = serverService.searchOwnedDevices(email);
+//        List<DeviceDto> devices = null;
+        System.out.println(devices);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(devices);
     }
 
+    @GetMapping("/fetchConnectingDevicesLogin")
+    public ResponseEntity<List<DeviceDto>> fetchConnectingDevicesLogin(@RequestParam String email) {
+
+        List<DeviceDto> liveDevices = serverService.checkDevicesHeartbeatLogin(email);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(liveDevices);
+    }
 }

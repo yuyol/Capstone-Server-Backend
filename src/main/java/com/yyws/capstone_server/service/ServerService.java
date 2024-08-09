@@ -3,6 +3,8 @@ package com.yyws.capstone_server.service;
 import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
+import com.yyws.capstone_server.entity.DeployRecord;
+import com.yyws.capstone_server.entity.UserDeviceRelation;
 
 import java.util.List;
 
@@ -29,4 +31,8 @@ public interface ServerService {
     void registerDevice(String email, String deviceId);
 
     List<DeviceDto> checkDevicesHeartbeatLogin(String email);
+
+    void deleteDeviceFromUser(UserDeviceRelation relation);
+
+    List<DeployRecord> searchDeployRecord(String email);
 }

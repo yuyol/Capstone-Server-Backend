@@ -3,6 +3,7 @@ package com.yyws.capstone_server.service.Impl;
 import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
+import com.yyws.capstone_server.entity.DeployRecord;
 import com.yyws.capstone_server.entity.Device;
 import com.yyws.capstone_server.entity.Model;
 import com.yyws.capstone_server.entity.UserDeviceRelation;
@@ -206,8 +207,8 @@ public class ServerServiceImpl implements ServerService {
                 if (durationSinceLastHeartbeat.compareTo(timeout) <= 0) {
                     DeviceDto deviceDto = ServerMapper.DeviceToDeviceDto(device, new DeviceDto());
                     // find if the device is owned by the user
-                    List<UserDeviceRelation> relationship = deviceRedisRepository.findRelationship(new UserDeviceRelation(email, String.valueOf(device.getId())));
-                    if (relationship.size() != 0){
+                    UserDeviceRelation relationship = deviceRedisRepository.findRelationship(new UserDeviceRelation(email, String.valueOf(device.getId())));
+                    if (relationship != null){
                         deviceDto.setOwned(1);
                     }
                     liveDevices.add(deviceDto);
@@ -217,6 +218,13 @@ public class ServerServiceImpl implements ServerService {
 
         return liveDevices;
     }
+
+    @Override
+    public void deleteDeviceFromUser(UserDeviceRelation relation) {
+        deviceRedisRepository.deleteDeviceFromUser(relation);
+    }
+
+
 
     public int isActive(Device device) {
         LocalDateTime now = LocalDateTime.now();
@@ -252,18 +260,11 @@ public class ServerServiceImpl implements ServerService {
         userDeviceRelation.setDeviceId(deviceId);
 
         // find if there is already a relationship
-        List<UserDeviceRelation> relationship = deviceRedisRepository.findRelationship(userDeviceRelation);
-        if (relationship.size() != 0) return;
+        UserDeviceRelation relationship = deviceRedisRepository.findRelationship(userDeviceRelation);
+        if (relationship != null) return;
 
-        // Generate unique id
-        String uniqueId = generateUniqueId();
-        UserDeviceRelation relation = deviceRedisRepository.findRelationByUniqueId(uniqueId);
-        while (relation != null) {
-            uniqueId = generateUniqueId();
-            relation = deviceRedisRepository.findRelationByUniqueId(uniqueId);
-        }
 
-        deviceRedisRepository.registerDevice(uniqueId, userDeviceRelation);
+        deviceRedisRepository.registerDevice(userDeviceRelation);
     }
 
     public String generateUniqueId() {
@@ -274,5 +275,11 @@ public class ServerServiceImpl implements ServerService {
             uniqueId.append(CHARACTERS.charAt(randomIndex));
         }
         return uniqueId.toString();
+    }
+
+    @Override
+    public List<DeployRecord> searchDeployRecord(String email) {
+        List<DeployRecord> records = deviceRedisRepository.searchDeployRecord(email);
+        return records;
     }
 }

@@ -3,6 +3,7 @@ package com.yyws.capstone_server.controller;
 import com.yyws.capstone_server.dto.DeviceDto;
 import com.yyws.capstone_server.dto.DeviceModelDto;
 import com.yyws.capstone_server.dto.ModelDto;
+import com.yyws.capstone_server.entity.DeployRecord;
 import com.yyws.capstone_server.entity.Device;
 import com.yyws.capstone_server.entity.UserDeviceRelation;
 import com.yyws.capstone_server.service.HttpService;
@@ -10,6 +11,7 @@ import com.yyws.capstone_server.service.ServerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import jssc.SerialPortList;
 import org.springframework.core.io.UrlResource;
@@ -21,8 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -197,7 +198,8 @@ public class ServerController {
     }
 
 
-    // added
+    /**********************       OTA Process      **********************/
+
     private final AtomicReference<String> requestedModel = new AtomicReference<>(null);
     // store the device - model relationship
     private final Map<String, String> deviceModelMap = new HashMap<>();
@@ -268,8 +270,14 @@ public class ServerController {
         return ResponseEntity.noContent().build();
     }
 
-    private final String uploadDir = System.getProperty("user.home") + "D:\\programming\\project\\capstone\\Arduino\\person_bellring";
+
+    /**************************          Arduino Converter          ****************************/
+    private final String arduinoCliPath = "C:\\Users\\georg\\AppData\\Local\\Programs\\Arduino IDE\\resources\\app\\lib\\backend\\resources\\arduino-cli.exe";
+
+    private final String uploadDir = System.getProperty("user.home") + "/Desktop/uploads/";
     private final String outputDir = System.getProperty("user.home") + "/Desktop/output/";
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerController.class);
+
     @PostMapping("/convert")
     public ResponseEntity<Resource> convertSketch(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -281,35 +289,92 @@ public class ServerController {
             File uploadDirectory = new File(uploadDir);
             if (!uploadDirectory.exists()) {
                 uploadDirectory.mkdirs();
+                LOGGER.info("Created upload directory at {}", uploadDir);
             }
 
             // Save the uploaded file
             String originalFilename = file.getOriginalFilename();
-            String uniqueFilename = UUID.randomUUID().toString() + "_" + originalFilename;
-            File uploadFile = new File(uploadDir + uniqueFilename);
+            if (originalFilename == null || !originalFilename.endsWith(".ino")) {
+                LOGGER.error("Uploaded file is not a valid Arduino sketch");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            }
+
+            // Create a unique directory with the same name as the sketch (without the .ino extension)
+            String sketchName = UUID.randomUUID().toString();
+            File sketchDirectory = new File(uploadDir + sketchName);
+            if (!sketchDirectory.exists()) {
+                sketchDirectory.mkdirs();
+            }
+
+            // Save the file in this directory with the same name as the directory
+            File uploadFile = new File(sketchDirectory, sketchName + ".ino");
             file.transferTo(uploadFile);
+            LOGGER.info("Saved uploaded file to {}", uploadFile.getAbsolutePath());
 
             // Ensure the output directory exists
             File outputDirectory = new File(outputDir);
             if (!outputDirectory.exists()) {
                 outputDirectory.mkdirs();
+                LOGGER.info("Created output directory at {}", outputDir);
             }
 
+            // Install necessary core for the ESP32-S3 board
+            ProcessBuilder coreInstallPb = new ProcessBuilder(arduinoCliPath, "core", "install", "esp32:esp32");
+            coreInstallPb.redirectErrorStream(true);
+            Process coreInstallProcess = coreInstallPb.start();
+            StringBuilder coreInstallOutput = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(coreInstallProcess.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    coreInstallOutput.append(line).append("\n");
+                }
+            }
+            int coreInstallExitCode = coreInstallProcess.waitFor();
+            if (coreInstallExitCode != 0) {
+                LOGGER.error("Arduino CLI core install process exited with code {}", coreInstallExitCode);
+                LOGGER.error("Arduino CLI core install output: \n{}", coreInstallOutput.toString());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+            LOGGER.info("Installed necessary core using Arduino CLI");
+
             // Compile the sketch using Arduino CLI
-            ProcessBuilder pb = new ProcessBuilder("arduino-cli", "compile",
-                    "--fqbn", "arduino:avr:uno",
+            ProcessBuilder pb = new ProcessBuilder(arduinoCliPath, "compile",
+                    "--fqbn", "esp32:esp32:esp32s3",
                     "--output-dir", outputDir,
-                    uploadFile.getAbsolutePath());
+                    "--build-property", "build.extra_flags=-DARDUINO=10810",
+                    sketchDirectory.getAbsolutePath());
+            pb.redirectErrorStream(true);
             Process process = pb.start();
-            process.waitFor();
+
+            // Capture and log the output of the Arduino CLI process
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append("\n");
+                }
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                LOGGER.error("Arduino CLI process exited with code {}", exitCode);
+                LOGGER.error("Arduino CLI output: \n{}", output.toString());
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+            LOGGER.info("Compiled sketch using Arduino CLI");
 
             // Retrieve the binary file
-            String binFileName = originalFilename.replace(".ino", ".ino.bin");
+            String binFileName = sketchName + ".ino.bin";
             Path binFilePath = Paths.get(outputDir, binFileName);
+            if (!Files.exists(binFilePath)) {
+                LOGGER.error("Binary file {} does not exist", binFilePath);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
             Resource resource = new FileSystemResource(binFilePath.toFile());
 
             // Clean up temporary files
             Files.delete(uploadFile.toPath());
+            LOGGER.info("Deleted temporary file {}", uploadFile.getAbsolutePath());
 
             // Return the binary file
             return ResponseEntity.ok()
@@ -318,11 +383,47 @@ public class ServerController {
                     .body(resource);
 
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error("Error processing file", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
+
+    @PostMapping("/api/convert")
+    public ResponseEntity<InputStreamResource> convertModel(@RequestParam("file") MultipartFile file) {
+        String inputPath = "uploaded_model.h5";
+        String outputPath = "model.tflite";
+        String scriptPath = "src/main/resources/scripts/convert_model.py";
+        try {
+            // Save the uploaded file to disk
+            File inputFile = new File(inputPath);
+            file.transferTo(inputFile);
+
+            // Execute the Python script
+            ProcessBuilder processBuilder = new ProcessBuilder("python", scriptPath, inputPath, outputPath);
+            Process process = processBuilder.start();
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                return ResponseEntity.status(500).body(null);
+            }
+
+            // Return the converted file
+            File convertedFile = new File(outputPath);
+            InputStreamResource resource = new InputStreamResource(new FileInputStream(convertedFile));
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=model.tflite");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(convertedFile.length())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
+    }
 
     /*********************               Device as Server                 **********************/
 
@@ -394,4 +495,26 @@ public class ServerController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(liveDevices);
     }
+
+    @PostMapping("/deleteDeviceFromUser")
+    public ResponseEntity<String> deleteDeviceFromUser(@RequestBody UserDeviceRelation relation) {
+
+
+        System.out.println(relation);
+        serverService.deleteDeviceFromUser(relation);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body("OK");
+    }
+
+
+    @GetMapping("/searchDeployRecord")
+    public ResponseEntity<List<DeployRecord>> searchDeployRecord(@RequestParam String email) {
+
+        List<DeployRecord> records = serverService.searchDeployRecord(email);
+
+        System.out.println(records);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(records);
+    }
+
 }

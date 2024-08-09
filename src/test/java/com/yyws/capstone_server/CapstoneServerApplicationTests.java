@@ -1,10 +1,7 @@
 package com.yyws.capstone_server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yyws.capstone_server.entity.Device;
-import com.yyws.capstone_server.entity.Model;
-import com.yyws.capstone_server.entity.UserDeviceRelation;
-import com.yyws.capstone_server.entity.Users;
+import com.yyws.capstone_server.entity.*;
 import org.h2.engine.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -159,8 +157,27 @@ class CapstoneServerApplicationTests {
 		System.out.println(collect);
 	}
 
-	void searchOwnRelation() {
+	@Test
+	void saveRecord() {
+		DeployRecord record = new DeployRecord();
+		record.setEmail("yy368@uw.edu");
+		record.setDevice("7935192");
+		record.setModel("od_animal.ino.bin");
+		record.setStatus(1);
+		record.setDate(LocalDateTime.now());
 
+		String key = "capstone:record:" + record.getEmail()+ ":" + record.getDevice() + ":" + record.getModel() + ":" + record.getDate().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+
+		redisTemplate.opsForValue().set(key, record);
 	}
 
+	@Test
+	void searchAllRecord() {
+		Set<String> keys = redisTemplate.keys("capstone:record:yy368@uw.edu:*");
+		List<DeployRecord> collect = keys.stream()
+				.map(key -> objectMapper.convertValue(redisTemplate.opsForValue().get(key), DeployRecord.class))
+				.collect(Collectors.toList());
+
+		System.out.println(collect);
+	}
 }
